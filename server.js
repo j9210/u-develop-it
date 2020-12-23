@@ -18,7 +18,10 @@ const db = new sqlite3.Database('./db/election.db', err => {
   console.log('Connected to the election database.');
 });
 
-// Get all candidates
+//*************************************
+// ******** Candidate routes **********
+//*************************************
+// Get all candidates and their party affiliation
 app.get('api/candidates', (req, res) => {
   const sql = `SELECT candidates.*, parties.name 
                AS party_name 
@@ -39,7 +42,7 @@ app.get('api/candidates', (req, res) => {
   });
 });
 
-// GET a single candidate
+// GET a single candidate with party affiliation
 app.get('/api/candidate/:id', (req, res) => {
   const sql = `SELECT candidates.*, parties.name 
                AS party_name 
@@ -61,31 +64,15 @@ app.get('/api/candidate/:id', (req, res) => {
   });
 });
 
-
-// DELETE a candidate
-app.delete('/api/candidate/:id', (req, res) => {
-  const sql = `DELETE FROM candidates WHERE id = ?`;
-  const params = [req.params.id]
-  db.run(sql, params, function(err, result) {
-    if (err) {
-      res.status(400).json({ error: res.message });
-      return;
-    }
-
-    res.jsont({
-      message: 'successfully deleted',
-      changes: this.changes
-    });
-  });
-});
-
 // CREATE a candidate
 app.post('/api/candidate', ({ body }, res) => {
+  // candidate is allowed not to be affliliated with a party
   const errors = inputCheck(body, 'first_name', 'last_name', 'industry_connected');
   if (errors) {
     res.status(400).json({ error: errors });
     return;
   };
+
   const sql = `INSERT INTO candidates ('first_name', 'last_name', 'industry_connected')
                 VALUES (?,?,?)`;
   const params = [body.first_name, body.last_name, body.industry_connected];
@@ -104,17 +91,19 @@ app.post('/api/candidate', ({ body }, res) => {
   }) ;
 });
 
+// UPDATE a candidate's party
 app.put('/api/candidate/:id', (req, res) => {
+  // Candidate is allowed to not have party affiliation
   const errors = inputCheck(req.body, 'party_id');
-
   if (errors) {
     res.status(400).json({ error: errors });
     return;
   }
+
   const sql = `UPDATE candidates SET party_id = ? 
                WHERE id = ?`;
   const params = [req.body.party_id, req.params.id];
-
+  // ES5 function, to use this
   db.run(sql, params, function(err, result) {
     if (err) {
       res.status(400).json({ error: err.message });
@@ -129,6 +118,26 @@ app.put('/api/candidate/:id', (req, res) => {
   });
 });
 
+// DELETE a candidate
+app.delete('/api/candidate/:id', (req, res) => {
+  const sql = `DELETE FROM candidates WHERE id = ?`;
+  const params = [req.params.id]
+  db.run(sql, params, function(err, result) {
+    if (err) {
+      res.status(400).json({ error: res.message });
+      return;
+    }
+
+    res.jsont({
+      message: 'successfully deleted',
+      changes: this.changes
+    });
+  });
+});
+
+//*************************************
+// *********** Party routes ***********
+//*************************************
 // GET all parties
 app.get('/api/parties', (req, res) => {
   const sql = `SELECT * FROM parties`;
@@ -146,7 +155,7 @@ app.get('/api/parties', (req, res) => {
   });
 });
 
-// GET all parties by id
+// GET single party
 app.get('/api/party/:id', (req, res) => {
   const sql = `SELECT * FROM parties WHERE id = ?`;
   const params = [req.params.id];
@@ -163,7 +172,7 @@ app.get('/api/party/:id', (req, res) => {
   });
 });
 
-// DELETE parties
+// DELETE a party
 app.delete('api/party/:id', (req, res) => {
   const sql = `DELETE FROM parties WHERE id = ?`;
   const params = [req.params.id];
